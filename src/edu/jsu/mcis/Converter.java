@@ -57,42 +57,130 @@ public class Converter {
     */
     
     @SuppressWarnings("unchecked")
+
     public static String csvToJson(String csvString) {
-        
-        String results = "";
-        
-        try {
-            
+
+       String results = "";
+       
+       try {
+
             CSVReader reader = new CSVReader(new StringReader(csvString));
             List<String[]> full = reader.readAll();
-            Iterator<String[]> iterator = full.iterator();
+            Iterator<String[]> iterator = full.iterator();      
+
+            JSONObject jsonContainer = new JSONObject();
+
+            ArrayList<String> jsonColHeader = new ArrayList<>();
+
+            ArrayList<String> jsonRowHeader = new ArrayList<>();
+
+            ArrayList<ArrayList<Integer>> jsonData = new ArrayList<>();
+
+            String[] colHeaders = full.get(0);
+         
+            for (String e: colHeaders) {
+
+                jsonColHeader.add(e);
+            }
+
+            for (int i = 1; i < full.size(); ++i) {
+
+                String[] row = full.get(i);
+                
+                jsonRowHeader.add(row[0]);
+                
+                ArrayList<Integer> dataRow = new ArrayList<>();
+
+                
+                for (int j = 1; j < row.length; ++j) {                  
+
+                    dataRow.add(Integer.parseInt(row[j]));
+                }
+
+                jsonData.add(new ArrayList(dataRow));
+            }
             
-            // INSERT YOUR CODE HERE
-            
+            jsonContainer.put("colHeaders", jsonColHeader);
+            jsonContainer.put("rowHeaders", jsonRowHeader);
+            jsonContainer.put("data", jsonData);
+
+            results = jsonContainer.toJSONString();
         }        
+
         catch(Exception e) { return e.toString(); }
-        
+       
         return results.trim();
         
     }
-    
+
     public static String jsonToCsv(String jsonString) {
-        
+
         String results = "";
-        
+
         try {
 
             StringWriter writer = new StringWriter();
             CSVWriter csvWriter = new CSVWriter(writer, ',', '"', '\n');
+
+            // Parse JSON data to a JSONObject map          
+
+            JSONParser parser = new JSONParser();
+
+            JSONObject jsonObject = (JSONObject)parser.parse(jsonString); 
             
-            // INSERT YOUR CODE HERE
+            JSONArray colHeaders = (JSONArray)jsonObject.get("colHeaders");
+            JSONArray rowHeaders = (JSONArray)jsonObject.get("rowHeaders");
+            JSONArray data = (JSONArray)jsonObject.get("data");                      
+
+            String[] colStringArray = new String[colHeaders.size()];
+            String[] rowStringArray = new String[rowHeaders.size()];
+            String[] dataStringArray = new String[data.size()];            
+
+            // Get column headers, and copy each into "colStringArray"
+
+            for (int i = 0; i < colHeaders.size(); i++){
+
+                colStringArray[i] = colHeaders.get(i).toString();
+            }           
+
+            // Output column headers to csvWriter         
+
+            csvWriter.writeNext(colStringArray);            
+
+            // Get the row headers and row data
+
+            for (int i = 0; i < rowHeaders.size(); i++){            
+                
+                rowStringArray[i] = rowHeaders.get(i).toString();                          
+                dataStringArray[i] = data.get(i).toString();
+            }
             
-        }
-        
-        catch(Exception e) { return e.toString(); }
-        
-        return results.trim();
-        
+            for (int i = 0; i < dataStringArray.length; i++) {           
+
+                // Parse row data into the JSON array "dataValues"                           
+
+                JSONArray dataValues = (JSONArray)parser.parse(dataStringArray[i]);
+
+                String[] row = new String[dataValues.size() + 1];
+
+                row[0] = rowStringArray[i];
+
+                for (int j = 0; j < dataValues.size(); j++) {
+
+                    row[j+1] = dataValues.get(j).toString();
+                }
+
+                csvWriter.writeNext(row);
+            }
+            
+            // Output the completed CSV data to a string
+
+            results = writer.toString();
+        }        
+
+        catch(ParseException e) { return e.toString(); }      
+
+        return results.trim();        
     }
 
 }
